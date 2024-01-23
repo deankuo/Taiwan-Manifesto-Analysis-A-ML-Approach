@@ -29,5 +29,8 @@ This part of the repository holds the output of the analysis. It includes proces
 | 2024-04-06 | Midwest Political Science Association Conference  | **PENG-TING KUO**, Ronan Tse-Min Fu    |
 | 2024-06-18 | Soochow University Conference  | **PENG-TING KUO**, Ronan Tse-Min Fu, Nick Lin    |
 
+## Published Journal 
+Forthcoming...
+
 
 *All Rights Reserved by PENG-TING KUO*
