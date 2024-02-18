@@ -3,9 +3,10 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from opencc import OpenCC
 
 # list
-years = [1998, 2001, 2004, 2008, 2012, 2016, 2020]
+years = [1992, 1995, 1998, 2001, 2004, 2008, 2012, 2016, 2020, 2024]
 
 # Self defined functions
 def load_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
@@ -35,12 +36,24 @@ def load_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
     # 去掉換行和tab鍵，這邊不能把這兩行一起執行是因為有些候選人的選舉公報只用換行來切割句子
     # df['CONTENT'] = df['CONTENT'].apply(lambda x: x.replace('\n', ' ').replace('\t', ' '))
 
-    df[['AREA', 'PARTY', 'CONTENT']] = df[['AREA', 'PARTY', 'CONTENT']].applymap(lambda x: x.strip() if isinstance(x, str) else x)
+    df[['AREA', 'PARTY', 'CONTENT']] = df[['AREA', 'PARTY', 'CONTENT']].map(lambda x: x.strip() if isinstance(x, str) else x)
     df.insert(4, 'ABORIGINE', df['AREA'].apply(lambda x: 1 if x[-3:] == '原住民' else 0))
 
     # Reset index
     df = df.reset_index()
     return df
+
+# Find duplicate names
+def find_duplicate_lnames(dfs: dict):
+    for name, df in dfs.items():
+        if name in set([2004, 2008]):
+            continue
+        else:
+            print(name)
+            duplicate_lnames = df[df.duplicated('LNAME', keep=False)]['LNAME']
+            if not duplicate_lnames.empty:
+                print(f"In DataFrame '{name}', the following 'LNAME' values are duplicated:")
+                print(duplicate_lnames.unique())
 
 # Clean text
 def text_clean(text: str) -> str: 
@@ -66,6 +79,7 @@ def party_processing(df:pd.DataFrame) -> pd.DataFrame:
         'independent': '無',
         'INDEPENDNET': '無',
         'INDEPENDENT': '無',
+        'iNDEPENDENT': '無',
         '慧行黨': '臺灣慧行志工黨',
     })
 
@@ -100,7 +114,7 @@ def dataset_cleaning(df: pd.DataFrame) -> pd.DataFrame:
     
     # ELE
     if df.ELE.sum() < 73:
-        df['ELE'] = df['當選註記'].apply(lambda x: 1 if x == "*" else 0)
+        df['ELE'] = np.where(df['當選註記'].isin(["1", 1, "*"]), 1, 0)
     
     # 現任
     df['現任'] = np.where(df['現任'].isin(['Y', 1, '是']), 1, 0)
@@ -114,6 +128,39 @@ def dataset_cleaning(df: pd.DataFrame) -> pd.DataFrame:
     new_order = ['LNAME', 'TH', 'AREA', 'PARTY', 'PARTY_CODE', '性別', '現任', '學歷', 'ELE', '得票數', '得票率', 'CONTENT']
     new_names = {'性別': 'GENDER', '得票數':'VOTES', '得票率': 'VOTER_TURNOUT', '現任': 'INCUMBENT', '學歷': 'EDUCATION'}
     df = df[new_order].rename(columns=new_names)
+    
+    # Content
+    df['CONTENT'] = df['CONTENT'].apply(lambda x: x.strip())
+    
+    # 去掉pdf檔出現的多餘空格
+    df['CONTENT'] = df['CONTENT'].apply(lambda x: x.replace(' ', ''))
+    
+    # 把半形換成全形
+    def half_to_full_width(s):
+        n = []
+        for char in s:
+            if char == ',':
+                n.append('，')
+            else:
+                code = ord(char)
+                if code == 46:  # '.' 不動
+                    pass
+                elif 33 <= code <= 126:
+                    code += 65248
+                n.append(chr(code))
+        return ''.join(n)
+
+    df['CONTENT'] = df['CONTENT'].apply(half_to_full_width)
+    
+    cc = OpenCC('s2t') # 簡體到繁體
+    def convert_to_traditional(text):
+        return cc.convert(text)
+
+    df['CONTENT'] = df['CONTENT'].apply(convert_to_traditional)  
+    
+    # 如果要以句子作為單位應該不能這樣做
+    # 去掉tab鍵，這邊不能把這兩行一起執行是因為有些候選人的選舉公報只用換行來切割句子
+    df['CONTENT'] = df['CONTENT'].apply(lambda x: x.replace('\t', ' '))
     
     # Ensure certain columns are integer type
     for column in ['TH', 'PARTY_CODE', 'GENDER', 'INCUMBENT', 'ELE', 'VOTES']:
