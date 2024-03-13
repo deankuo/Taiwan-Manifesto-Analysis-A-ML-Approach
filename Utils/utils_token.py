@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import re
 import os
+import time
+from tqdm.auto import tqdm
 from ckiptagger import WS, POS, NER, construct_dictionary # tokenization
 
 # CKIP module
@@ -73,9 +75,72 @@ def load_text(content: str, test=False) -> str:
         return sentence, clean_pos, ner_, token
     else:
          return sentence, token
+     
+def full_to_half(text):
+        n = []
+        for char in text:
+            code = ord(char)
+            if code == 12288:  # 全形空格直接转换
+                code = 32
+            elif 65281 <= code <= 65374:  # 全形字符（除空格）转换公式
+                code -= 65248
+            n.append(chr(code))
+        return ''.join(n)
+
+def remove_list_marks(text):
+    """移除句首的標號，但保留其他所有的文字。"""
+    patterns = [
+        r'^\d+[．，、\.]',  # 數字加點，例如 "1."
+        r'^[一二三四五六七八九十零]+[，、\.]',  # 中文數字，例如 "一、"，"十一、"
+        r'^\([一二三四五六七八九十零\d]+\)',  # 括號的中文數字，例如 "(1)"，"(十一)"
+        r'^\（[一二三四五六七八九十零\d]+\）',
+        r'^[①②③④⑤⑥⑦⑧⑨⑩]',
+        r'^[１２３４５６７８９０]+[．\.]',
+        r'^●',
+        r'^■',
+        r'^⊙',
+        r'^\*',
+        r'^@',
+        r'^\.',
+        r'^#',
+        r'^◎',
+        r'^▶',
+        r'^★',
+        r'[㈠-㈩]',
+        r'[\u2474-\u2487]', # 類似這種：⑵
+    ]
+    
+    text = full_to_half(text)
+    for pattern in patterns:
+        text = re.sub(pattern, '', text)
+    
+    return text.strip()
+
+def tokenization(year: int, df: pd.DataFrame) -> pd.DataFrame:
+    """_summary_
+
+    Args:
+        year (int): Election year.
+        df (pd.DataFrame): Dataframe that has CONTENT column
+
+    Returns:
+        pd.DataFrame: A tokenized dataframe.
+    """
+    start = time.time()
+    
+    df['CONTENT'] = df['CONTENT'].apply(remove_list_marks)
+    df['CONTENT_LENGTH'] = df['CONTENT'].apply(len)
+    tqdm.pandas(desc=f"Tokenizing {year} election statements")
+    df[['SENTENCE', 'TOKEN']] = df['CONTENT'].progress_apply(load_text).apply(pd.Series)
+    
+    end = time.time()
+    
+    # 每一年份使用CPU的運算時間約為10分鐘
+    print(f"{year}年選舉公報的斷詞運算時間為: {round((end - start) / 60, 2)} 分")
+    return df
 
 def split_content(df: pd.DataFrame) -> pd.DataFrame:
-    """
+    """_summary_
     This function is used to divide the manifestos into policies or sentences.
     Args:
         df (pd.DataFrame): Input a Dataframe that contains CONTENT column which stores the manifesto data.
@@ -102,7 +167,8 @@ def split_content(df: pd.DataFrame) -> pd.DataFrame:
         
         # 複製每一筆原本的資料，對齊切分後的筆數
         for sentence in sentences:
-            sentence = sentence.replace(' ', '')
+            sentence = sentence.strip()
+            sentence = sentence.replace(' ', '').replace('\n', '')
             # 如果是以冒號結尾的句子則刪除
             if sentence.endswith((':', '：')):
                 continue
@@ -113,3 +179,34 @@ def split_content(df: pd.DataFrame) -> pd.DataFrame:
     new_df = pd.concat([pd.DataFrame([row]) for row in rows_list], ignore_index=True)
     
     return new_df
+
+def postprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Postprocessing DataFrame: 去除換行符號以及 CONTENT 字串中長度小於 2 的資料。
+
+    Args:
+        df (pd.DataFrame): 已經切分好的 DataFrame。
+
+    Returns:
+        pd.DataFrame: 後處理的 DataFrame，包含 CLEAN_CONTENT, WEIGHT, PART 欄位。
+    """
+   
+    def remove_newlines(text):
+        if pd.isnull(text):
+            return text
+        else:
+            text = text.strip()
+        return text.replace('\n', '').replace('\r', '')
+
+    filtered_df = df[df['CONTENT'].str.len() >= 2].copy()
+    filtered_df['CLEAN_CONTENT'] = filtered_df['CONTENT'].apply(remove_list_marks)
+    filtered_df['WEIGHT'] = filtered_df['CONTENT'].apply(lambda x: len(x)) / filtered_df.groupby('ID')['CONTENT'].transform('sum').apply(lambda x: len(x))
+    filtered_df['PART'] = 1 / filtered_df.groupby('ID')['ID'].transform('size')
+
+    for column in ['CONTENT', 'SENTENCE', 'TOKEN', 'CLEAN_CONTENT']:
+        if column in filtered_df.columns:
+            filtered_df.loc[:, column] = filtered_df[column].apply(remove_newlines)
+            filtered_df[column] = filtered_df[column].astype(str)
+    
+    filtered_df = filtered_df.dropna()
+    
+    return filtered_df

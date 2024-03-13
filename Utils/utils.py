@@ -122,10 +122,13 @@ def dataset_cleaning(df: pd.DataFrame) -> pd.DataFrame:
     # 性別: Male: 1, Female: 0
     df['性別'] = df['性別'].apply(lambda x: 1 if x == 1 else 0) # 原始的女性coding有0, 2
     
+    # Text length
+    df['CONTENT_LENGTH'] = df['CONTENT'].apply(len)
+    
     # Drop columns
     df = df.drop(['當選註記', 'ABORIGINE', 'BYELE'], axis=1)
 
-    new_order = ['LNAME', 'TH', 'AREA', 'PARTY', 'PARTY_CODE', '性別', '現任', '學歷', 'ELE', '得票數', '得票率', 'CONTENT']
+    new_order = ['LNAME', 'TH', 'AREA', 'PARTY', 'PARTY_CODE', '性別', '現任', '學歷', 'ELE', '得票數', '得票率', 'CONTENT', 'CONTENT_LENGTH']
     new_names = {'性別': 'GENDER', '得票數':'VOTES', '得票率': 'VOTER_TURNOUT', '現任': 'INCUMBENT', '學歷': 'EDUCATION'}
     df = df[new_order].rename(columns=new_names)
     
@@ -163,7 +166,7 @@ def dataset_cleaning(df: pd.DataFrame) -> pd.DataFrame:
     df['CONTENT'] = df['CONTENT'].apply(lambda x: x.replace('\t', ' '))
     
     # Ensure certain columns are integer type
-    for column in ['TH', 'PARTY_CODE', 'GENDER', 'INCUMBENT', 'ELE', 'VOTES']:
+    for column in ['TH', 'PARTY_CODE', 'GENDER', 'INCUMBENT', 'ELE', 'VOTES', 'CONTENT_LENGTH']:
         df[column] = df[column].astype(int)
 
     # Ensure certain columns are string type
