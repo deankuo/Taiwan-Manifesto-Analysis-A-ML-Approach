@@ -1,6 +1,6 @@
-# Electoral Reform and Campaign Tactics: A Machine Learning Analysis of Taiwanese Legislative Candidates’ Manifestos
+# The Impact of Electoral Reform on Legislative Election Strategies: A Machine Learning Approach
 
-This folder contains all of the data and scripts written by PENG-TING KUO at Political Science Department at NTU for the purpose of his master dissertation: *Electoral Reform and Campaign Tactics: A Machine Learning Analysis of Taiwanese Legislative Candidates’ manifestos*. 
+This folder contains all of the data and scripts written by Peng-Ting Kuo at Political Science Department at NTU for the purpose of his master dissertation: *The Impact of Electoral Reform on Legislative Election Strategies: A Machine Learning Approach*. 
 
 ## Repository Configuration
 
