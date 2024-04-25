@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import re
-import os
 import time
 from tqdm.auto import tqdm
 from ckiptagger import WS, POS, NER, construct_dictionary # tokenization
@@ -12,7 +11,7 @@ ws = WS(CKIP_PATH) # 斷詞
 pos = POS(CKIP_PATH) # 詞性標註
 ner = NER(CKIP_PATH) # 命名實體識別
 
-# 加入自定義字典
+# Self-define dict
 word_to_weight = {'823': 1, 'ECFA': 1, '2300': 1, '台26線': 1, '台74線': 1, '12年國教': 1, 'BOT': 1, '88快速道路': 1, '台27線': 1, '台61線': 1, '十二年國教': 1, '國道10號': 1,
                   '台88號': 1, 'M型': 1, '205兵工廠': 1, '北二高': 1, '台65線': 1, 'CEPA': 1, 'FTA': 1, '科學園區': 1, '228': 1, 'MIT': 1, '202兵工廠': 1, '86快速道路': 1, '國道8號': 1,
                   '台64': 1, '台66': 1, 'iBike': 1, 'MRT': 1, 'TPP': 1, 'TIFA': 1, 'TPP':1, '台22': 1, '台29': 1, '國10': 1, '國1': 1, '318': 1, 'NCC':1, 'PM2.5': 1, 'YouBike': 1, 
@@ -20,7 +19,7 @@ word_to_weight = {'823': 1, 'ECFA': 1, '2300': 1, '台26線': 1, '台74線': 1, 
                   '教育券': 1, '九二共識': 1}
 dictionary = construct_dictionary(word_to_weight)
 
-# 停用詞
+# Stopwords
 with open("./Data/stopwords_zh-tw.txt", encoding="utf-8") as fin:
     stopwords = fin.read().split("\n")[1:]
     
@@ -90,24 +89,18 @@ def full_to_half(text):
 def remove_list_marks(text):
     """移除句首的標號，但保留其他所有的文字。"""
     patterns = [
-        r'^\d+[．，、\.]',  # 數字加點，例如 "1."
-        r'^[一二三四五六七八九十零]+[，、\.]',  # 中文數字，例如 "一、"，"十一、"
+        r'^\d+[,．，、。\.]',  # 數字加點，例如 "1.", "1,", "1、", "1，", "1。",
+        r'^[一二三四五六七八九十零]+[,，、。\.]',  # 中文數字，例如 "一、", "一，", "一,", "一.", "一。",
         r'^\([一二三四五六七八九十零\d]+\)',  # 括號的中文數字，例如 "(1)"，"(十一)"
         r'^\（[一二三四五六七八九十零\d]+\）',
-        r'^[①②③④⑤⑥⑦⑧⑨⑩]',
-        r'^[１２３４５６７８９０]+[．\.]',
-        r'^●',
-        r'^■',
-        r'^⊙',
-        r'^\*',
-        r'^@',
-        r'^\.',
-        r'^#',
-        r'^◎',
-        r'^▶',
-        r'^★',
-        r'[㈠-㈩]',
-        r'[\u2474-\u2487]', # 類似這種：⑵
+        r'^\〔[一二三四五六七八九十零\d]+\〕',
+        r'^[①②③④⑤⑥⑦⑧⑨⑩]+[,，、。\.]',
+        r'^[１２３４５６７８９０]+[,，、。\.]',
+        r'^[ABCDEFGHIJK]+[,，、。\.]'
+        r'^[壹貳參肆伍陸柒捌玖拾]+[,，、。\.]'
+        r'^[●■⊙※*@.#◎▶★>▓▲◆©]',  # 所有單一字符的模式
+        r'[㈠-㈩]+[,，、。\.]',
+        r'[\u2474-\u2487]+[,，、。\.]', # 類似這種：⑵
     ]
     
     text = full_to_half(text)
@@ -135,7 +128,7 @@ def tokenization(year: int, df: pd.DataFrame) -> pd.DataFrame:
     
     end = time.time()
     
-    # 每一年份使用CPU的運算時間約為10分鐘
+    # 每一年份使用CPU的運算時間約為9分鐘
     print(f"{year}年選舉公報的斷詞運算時間為: {round((end - start) / 60, 2)} 分")
     return df
 
@@ -155,9 +148,9 @@ def split_content(df: pd.DataFrame) -> pd.DataFrame:
         newline_count = content.count('\n')
         
         # 以換行符號決定切分依據
-        if newline_count > 5:
+        if newline_count > 3:
             # 使用換行符號和句號、驚嘆號切分
-            sentences = re.split(r'\n|(\n[。！])', content)
+            sentences = re.split(r'\n|(\n[。！？])', content)
         else:
             # 使用句號切分
             sentences = re.split(r'[。！]', content)
@@ -169,6 +162,7 @@ def split_content(df: pd.DataFrame) -> pd.DataFrame:
         for sentence in sentences:
             sentence = sentence.strip()
             sentence = sentence.replace(' ', '').replace('\n', '')
+            
             # 如果是以冒號結尾的句子則刪除
             if sentence.endswith((':', '：')):
                 continue

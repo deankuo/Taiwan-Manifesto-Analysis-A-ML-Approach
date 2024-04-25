@@ -5,13 +5,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 from opencc import OpenCC
 
-# list
+# Election year list
 years = [1992, 1995, 1998, 2001, 2004, 2008, 2012, 2016, 2020, 2024]
 
 # Self defined functions
 def load_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
-    """Load the original raw data of manifesto."""
-    df["CONTENT"]= df["CONTENT"].astype(str)
+    """_summary_
+    Load the original raw data of manifesto.
+    
+    Args:
+        df (pd.DataFrame): Raw data
+        year (int): election year
+
+    Returns:
+        pd.DataFrame: _description_
+    """
+    df["CONTENT"] = df["CONTENT"].astype(str)
+    
+    # I use the data in 2004 and 2008 from 廖達琪老師
     if year in set([2004, 2008]):
         # Groupby and combine by LNAME
         df = df.groupby('LNAME').agg({'TH': 'first',
@@ -28,7 +39,7 @@ def load_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
                                       'ELE': 'first',
                                       'CONTENT': lambda x: ' + '.join(x) if not all(pd.isnull(x)) else ''})
         
-        # 原先我只有coding好當選的人為1
+        # 原先coding當選的人為1
         df['ELE'] = df['ELE'].fillna(0)
 
     # 去掉pdf檔出現的多餘空格
@@ -36,7 +47,7 @@ def load_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
     # 去掉換行和tab鍵，這邊不能把這兩行一起執行是因為有些候選人的選舉公報只用換行來切割句子
     # df['CONTENT'] = df['CONTENT'].apply(lambda x: x.replace('\n', ' ').replace('\t', ' '))
 
-    df[['AREA', 'PARTY', 'CONTENT']] = df[['AREA', 'PARTY', 'CONTENT']].map(lambda x: x.strip() if isinstance(x, str) else x)
+    df[['AREA', 'PARTY', 'CONTENT']] = df[['AREA', 'PARTY', 'CONTENT']].applymap(lambda x: x.strip() if isinstance(x, str) else x)
     df.insert(4, 'ABORIGINE', df['AREA'].apply(lambda x: 1 if x[-3:] == '原住民' else 0))
 
     # Reset index
@@ -57,7 +68,14 @@ def find_duplicate_lnames(dfs: dict):
 
 # Clean text
 def text_clean(text: str) -> str: 
-    """Delete all [] and () in 2004, 2008 data."""
+    """Delete all [] and () in 2004, 2008 data.
+
+    Args:
+        text (str): Input text
+
+    Returns:
+        str: Output normal text
+    """
     stop_word = "[]+- "
     result = ""
     for word in text:
@@ -71,7 +89,14 @@ def text_clean(text: str) -> str:
 
 # Party encoding
 def party_processing(df:pd.DataFrame) -> pd.DataFrame:
-    """This function is used for party coding."""
+    """Function for coding parties.
+
+    Args:
+        df (pd.DataFrame): Should include the PARTY column
+
+    Returns:
+        pd.DataFrame: Add PARTY_CODE column
+    """
     df['PARTY'] = df['PARTY'].replace({
         'KMT': '國民黨',
         'DPP': '民進黨',
@@ -84,7 +109,8 @@ def party_processing(df:pd.DataFrame) -> pd.DataFrame:
     })
 
     party_map = {'國民黨': 1, '民進黨': 2, '親民黨': 3, '新黨': 4, '無黨團結聯盟': 5, '台聯黨': 6, '無': 7, '台灣民眾黨': 8, '時代力量': 9, '台灣團結聯盟': 10}
-    # 其他政黨
+    
+    # Other parties
     party_codes = df['PARTY'].map(party_map).fillna(20)
     df.insert(df.columns.get_loc('PARTY') + 1, 'PARTY_CODE', party_codes)
 
@@ -104,7 +130,14 @@ def content_processing(df: pd.DataFrame) -> pd.DataFrame:
 
 # Make sure the dataset is as clean as possible
 def dataset_cleaning(df: pd.DataFrame) -> pd.DataFrame:
-    """This function is used to make sure the configuration of datasets."""
+    """This function is used for making sure the configuration of datasets.
+
+    Args:
+        df (pd.DataFrame)
+
+    Returns:
+        pd.DataFrame
+    """
     
     # Adjusts candidates' name
     df['LNAME'] = df.apply(lambda row: str(row['LNAME']) + '_' + str(int(row['TH'])), axis=1)
@@ -185,11 +218,11 @@ def vote_calculate(group):
         當選人在二人以上，得票數達各該選舉區當選票數二分之一以上者，應補貼其競選費用，每票補貼新臺幣三十元。但其最高額，不得超過各該選舉區候選人競選經費最高金額。
     """
     least_win_votes = int(group.loc[group['ELE'] == 1, 'VOTES'].min())
-    threshold = min(least_win_votes / (2 if group['ELE'].sum() > 2 else 3), 1000) # 以1000票作為最低門檻
+    threshold = min(least_win_votes / (2 if group['ELE'].sum() > 2 else 3), 1000) # 1000 votes as the threshold.
 
     return group['VOTES'].apply(lambda x: x >= threshold)
 
-# 主要政黨
+
 def is_main_party(df: pd.DataFrame):
     """
     Main party coding.
