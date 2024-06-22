@@ -10,7 +10,7 @@ years = [1992, 1995, 1998, 2001, 2004, 2008, 2012, 2016, 2020, 2024]
 
 # Self defined functions
 def load_dataframe(df: pd.DataFrame, year: int) -> pd.DataFrame:
-    """_summary_
+    """
     Load the original raw data of manifesto.
     
     Args:
@@ -68,7 +68,8 @@ def find_duplicate_lnames(dfs: dict):
 
 # Clean text
 def text_clean(text: str) -> str: 
-    """Delete all [] and () in 2004, 2008 data.
+    """
+    Delete all [] and () in 2004, 2008 data.
 
     Args:
         text (str): Input text
@@ -89,13 +90,14 @@ def text_clean(text: str) -> str:
 
 # Party encoding
 def party_processing(df:pd.DataFrame) -> pd.DataFrame:
-    """Function for coding parties.
+    """
+    Function for coding parties.
 
     Args:
-        df (pd.DataFrame): Should include the PARTY column
+        df (pd.DataFrame): Should include the PARTY column.
 
     Returns:
-        pd.DataFrame: Add PARTY_CODE column
+        pd.DataFrame: Add PARTY_CODE column.
     """
     df['PARTY'] = df['PARTY'].replace({
         'KMT': '國民黨',
@@ -118,7 +120,15 @@ def party_processing(df:pd.DataFrame) -> pd.DataFrame:
 
 # Content words sanity
 def content_processing(df: pd.DataFrame) -> pd.DataFrame:
-    """Used for content processing, especially for replacing similar words."""
+    """
+    Used for content processing, especially for replacing similar words.
+
+    Args:
+        df (pd.DataFrame):
+
+    Returns:
+        pd.DataFrame:
+    """
     df['LNAME'] = df['LNAME'].apply(lambda x: x.strip())
     df['AREA'].replace({'台': '臺'}, inplace=True, regex=True)
     df['CONTENT'] = df['CONTENT'].apply(text_clean)
@@ -130,13 +140,28 @@ def content_processing(df: pd.DataFrame) -> pd.DataFrame:
 
 # Make sure the dataset is as clean as possible
 def dataset_cleaning(df: pd.DataFrame) -> pd.DataFrame:
-    """This function is used for making sure the configuration of datasets.
+    """
+    Cleans and prepares the dataset of political candidates for analysis by performing multiple data transformations.
 
     Args:
-        df (pd.DataFrame)
+    - df (pd.DataFrame): The input DataFrame containing candidate data.
 
     Returns:
-        pd.DataFrame
+    - pd.DataFrame: The cleaned and transformed DataFrame.
+
+    Description:
+    - Adjusts candidates' names to include their election threshold ('TH') as a suffix for uniqueness.
+    - Filters out rows where candidates are either aboriginal or by-election candidates.
+    - Recalculates 'ELE' column as binary based on election result indicators, if the sum is less than 73.
+    - Converts values in '現任' column to binary (1 for current, 0 for not current) based on specific indicators.
+    - Standardizes gender representation to binary (Male: 1, Female: 0).
+    - Calculates the length of the campaign content and stores it in 'CONTENT_LENGTH'.
+    - Drops unnecessary columns and reorders the DataFrame according to a new specified order.
+    - Cleans and normalizes the text content, removing extra spaces, converting half-width characters to full-width, and converting simplified Chinese to traditional Chinese.
+    - Ensures data types are correct for analysis by converting some columns to integer or string types, and resetting the DataFrame index.
+
+    Note:
+    - This function includes specific logic tailored to the structure and content of the input DataFrame expected to have columns like 'TH', 'ABORIGINE', 'BYELE', etc.
     """
     
     # Adjusts candidates' name
@@ -233,27 +258,43 @@ def is_main_party(df: pd.DataFrame):
 
 # Visualization Functions
 def party_plot(party_data: list, years: list, save=False):
-    """This function is for plotting party number over years."""
-    plt.figure(figsize=(8, 6))
-    plt.plot(years, party_data, marker='o', linestyle='-', color='steelblue')
+    """
+    This function is for plotting party number over years.
+    """
+    fig, ax = plt.subplots(figsize=(12, 8))
+    terms = list(range(2, len(years) + 2))
+    
+    # 繪製數據
+    ax.plot(terms, party_data, marker='o', linestyle='-', color='steelblue')
 
-    for x, y in zip(years, party_data):
-        plt.text(x, y, str(y), ha='center', va='bottom', fontsize=10, color='black')
-
-    plt.ylabel('The Amount of Party', fontsize=12)
-    plt.title('Total Party Number', fontsize=14)
-    plt.xticks(years, fontsize=10)
-    plt.yticks(fontsize=10)
+    # 添加數據標籤
+    for x, y in zip(terms, party_data):
+        ax.text(x, y + 0.5, str(y), ha='center', va='bottom', fontsize=10, color='black')
+    
+    # 設置 x 軸標籤
+    th_year_dict = {2: "1992", 3: "1995", 4: "1998", 5: "2001", 6: "2004", 7: "2008", 8: "2012", 9: "2016", 10: "2020", 11: "2024"}
+    new_xtick_labels = [f"{term}\n({th_year_dict[term]})" for term in terms]
+    ax.set_xticks(terms)
+    ax.set_xticklabels(new_xtick_labels, fontsize=10)
+    
+    # 設置軸標題
+    ax.set_ylabel('The Amount of Party', fontsize=12)
+    ax.set_xlabel('Election Year', fontsize=12)
+    
+    # 確保 x 軸標籤能夠顯示
+    plt.xticks(rotation=0, ha='center')
     
     if save:
-        plt.savefig("./Graphs/Party Number.png")
+        plt.savefig("./Graphs/Party_Number.png", bbox_inches='tight')
     else:
         plt.show()
     
 
 # Vote Datasets
 def fill_education(dfs_vote: dict) -> dict:
-    """This function is used for fill the missing value of 學歷 in vote_{year}.csv"""
+    """
+    This function is used for fill the missing value of 學歷 in vote_{year}.csv
+    """
     education_diff = []
 
     for year, df in dfs_vote.items():
@@ -275,7 +316,9 @@ def fill_education(dfs_vote: dict) -> dict:
     return dfs_vote, education_diff
 
 def fill_age(dfs_vote: dict) -> dict:
-    """This function is used for fill the missing value of 年齡 in vote_{year}.csv"""
+    """
+    This function is used for fill the missing value of 年齡 in vote_{year}.csv
+    """
     base_year = list(dfs_vote.keys())[0]
 
     for index, row in dfs_vote[base_year].iterrows():

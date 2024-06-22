@@ -28,6 +28,17 @@ def flatten(input_list: list) -> list:
 
 # Text filter
 def text_select(ws_sentence: list, pos_sentence: list, bert=False) -> list:
+    """
+    Text selection based on listed conditions.
+
+    Args:
+        ws_sentence (list): word segmentation results.
+        pos_sentence (list): pos results.
+        bert (bool, optional): Defaults to False.
+
+    Returns:
+        list:
+    """
     assert len(ws_sentence) == len(pos_sentence)
     
     sentence_list = []
@@ -86,8 +97,16 @@ def full_to_half(text):
             n.append(chr(code))
         return ''.join(n)
 
-def remove_list_marks(text):
-    """移除句首的標號，但保留其他所有的文字。"""
+def remove_list_marks(text: str) -> str:
+    """
+    移除句首的標號，但保留其他所有的文字。
+
+    Args:
+        text (str):
+
+    Returns:
+        str: 
+    """
     patterns = [
         r'^\d+[,．，、。\.]',  # 數字加點，例如 "1.", "1,", "1、", "1，", "1。",
         r'^[一二三四五六七八九十零]+[,，、。\.]',  # 中文數字，例如 "一、", "一，", "一,", "一.", "一。",
@@ -110,7 +129,7 @@ def remove_list_marks(text):
     return text.strip()
 
 def tokenization(year: int, df: pd.DataFrame) -> pd.DataFrame:
-    """_summary_
+    """
 
     Args:
         year (int): Election year.
@@ -133,8 +152,9 @@ def tokenization(year: int, df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def split_content(df: pd.DataFrame) -> pd.DataFrame:
-    """_summary_
+    """
     This function is used to divide the manifestos into policies or sentences.
+    
     Args:
         df (pd.DataFrame): Input a Dataframe that contains CONTENT column which stores the manifesto data.
 
@@ -175,7 +195,8 @@ def split_content(df: pd.DataFrame) -> pd.DataFrame:
     return new_df
 
 def postprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Postprocessing DataFrame: 去除換行符號以及 CONTENT 字串中長度小於 2 的資料。
+    """
+    Postprocessing DataFrame: 去除換行符號以及 CONTENT 字串中長度小於 2 的資料。
 
     Args:
         df (pd.DataFrame): 已經切分好的 DataFrame。
