@@ -809,43 +809,6 @@ def plot_pork_policy_ratios(dfs: list, titles: list, save=False):
     else:
         plt.show()
 
-def plot_change(df: pd.DataFrame, columns: list, model='LDA', save=False):
-    colors = ['#6E7F80', '#A4BE8C', '#D1B2A5']
-    fig, ax = plt.subplots(figsize=(8, 6))
-
-    width_ = 0.3
-    means = []
-    stds = []
-    th_labels = []
-
-    for th in sorted(df['TH'].unique()):
-        df_filtered = df[df['TH'] == th]
-        mean = df_filtered[columns].mean(axis=1).mean()
-        std = df_filtered[columns].mean(axis=1).std()
-        print(f"mean: {round(mean, 3)}, std: {round(std, 3)}")
-
-        means.append(mean)
-        stds.append(std)
-        th_labels.append(f"{th}\n({str(th)})")
-
-    positions = np.arange(len(means))
-    bars = ax.bar(positions, means, width=width_, color=colors[:len(means)], capsize=5)
-
-    for bar, mean in zip(bars, means):
-        yval = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, yval, round(mean, 2), ha='center', va='bottom')
-
-    ax.set_xlabel('Election')
-    ax.set_ylabel('Average Pork Ratio')
-    plt.xticks(positions, ['6th Election', '7th Election'])
-    plt.legend(['Mean of Pork Ratio'], loc='best')
-
-    plt.tight_layout()
-    if save:
-        plt.savefig(f'Graph/Average_Weights_by_Election_{model}.png')
-    else:
-        plt.show()
-
 
 def perform_t_test(df: pd.DataFrame, columns: list, candidate: str):
     """
