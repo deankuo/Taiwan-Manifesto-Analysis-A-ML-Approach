@@ -1,14 +1,33 @@
-# env
+# Environment
 .env
 
-# data
+# Data (raw and processed — use external storage or DVC)
 data/
+
+# Output results and generated figures
+output/
 Output/
 
 # Mac
 .DS_Store
 
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.eggs/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
+
+# CKIP model data (large binary, download separately)
+CKIP_TAGGER/
+
 # Claude
 CLAUDE.md
-.vscode/
 .claude/
