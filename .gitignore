@@ -1,0 +1,14 @@
+# env
+.env
+
+# data
+data/
+Output/
+
+# Mac
+.DS_Store
+
+# Claude
+CLAUDE.md
+.vscode/
+.claude/
